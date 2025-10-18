@@ -58,6 +58,6 @@ func main() {
 	}
 
 	// 5. Print the PLAIN TEXT password to standard output for the install script
-	fmt.Print("Your password is: ", password, " SAVE THIS PASSWORD, it will not be shown again! ")
+	fmt.Print(password)
 }
 
