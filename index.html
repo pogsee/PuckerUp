@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="night">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PuckerUp - Puck Server Admin</title>
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@2.51.6/dist/full.css" rel="stylesheet" type="text/css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Added Google Fonts for pixelated text -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <style>
+        .server-block { transition: all 0.3s ease-in-out; }
+        .advanced-settings { transition: max-height 0.5s ease-in-out, opacity 0.5s ease-in-out; max-height: 0; overflow: hidden; opacity: 0; }
+        .advanced-settings.show { max-height: 2000px; opacity: 1; }
+        
+        /* New styles for the flashing text */
+        .motd-text {
+            font-family: 'Press Start 2P', cursive;
+            font-size: 0.75rem; /* 12px */
+            margin-left: 1.5rem; /* 24px */
+            animation: flash 2s infinite;
+        }
+
+        @keyframes flash {
+            0%, 100% {
+                color: #facc15; /* yellow-400 */
+                opacity: 1;
+            }
+            50% {
+                color: #fde047; /* yellow-300 */
+                opacity: 0.7;
+            }
+        }
+    </style>
+</head>
+<body class="bg-base-100 text-base-content">
+
+    <div class="container mx-auto p-4 md:p-8">
+
+        <div class="navbar bg-base-300 rounded-box mb-8 shadow-lg">
+            <div class="flex-1 items-baseline">
+                <a class="btn btn-ghost normal-case text-xl">PuckerUp</a>
+                <!-- New element for the random phrase -->
+                <span id="motd" class="motd-text hidden md:inline"></span>
+            </div>
+            <div class="flex-none">
+                <span class="text-sm mr-4" id="status-indicator">Connecting...</span>
+                <button id="logout-btn" class="btn btn-sm btn-outline btn-error">Logout</button>
+            </div>
+        </div>
+
+        <div id="install-view" class="text-center hidden">
+             <div class="card bg-base-200 shadow-xl max-w-lg mx-auto">
+                <div class="card-body">
+                    <h2 class="card-title text-2xl justify-center">Puck Server Not Found!</h2>
+                    <p>The Puck server executable was not found at "/srv/puckserver/Puck.x86_64".</p>
+                    <div class="card-actions justify-center mt-4">
+                        <button id="install-btn" class="btn btn-primary btn-wide">Install Puck Server</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="servers-view" class="hidden">
+            <div class="form-control w-52 mb-6">
+                <label class="cursor-pointer label">
+                    <span class="label-text">Show All Servers</span>
+                    <input type="checkbox" class="toggle toggle-primary" id="show-all-servers-toggle" />
+                </label>
+            </div>
+            <div id="server-container" class="space-y-6"></div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const phrases = [
+                "Where the puck stops. (And starts.)",
+                "Don’t puck this up.",
+                "What the actual puck?",
+                "Holy puck!",
+                "Don’t puck with the settings.",
+                "What a cluster-puck.",
+                "Puck it, we’ll do it live.",
+                "For puck’s sake…",
+                "Zero pucks given.",
+                "No pucking around.",
+                "What the puck is going on?",
+                "Say puck again 🔫👨🏾",
+                "6-7"
+            ];
+            const motdElement = document.getElementById('motd');
+            const randomPhrase = phrases[Math.floor(Math.random() * phrases.length)];
+            motdElement.innerHTML = randomPhrase;
+
+            const installView = document.getElementById('install-view');
+            const serversView = document.getElementById('servers-view');
+            const installBtn = document.getElementById('install-btn');
+            const serverContainer = document.getElementById('server-container');
+            const showAllServersToggle = document.getElementById('show-all-servers-toggle');
+            const statusIndicator = document.getElementById('status-indicator');
+            const logoutBtn = document.getElementById('logout-btn');
+
+            const API_BASE_URL = '/api';
+
+            const api = {
+                checkStatus: () => fetch(`${API_BASE_URL}/status`).then(res => res.json()),
+                installServer: () => fetch(`${API_BASE_URL}/install`, { method: 'POST' }).then(res => res.json()),
+                controlServer: (serverNum, action) => fetch(`${API_BASE_URL}/server/${serverNum}/control`, { method: 'POST', body: JSON.stringify({ action }), headers: { 'Content-Type': 'application/json' } }).then(res => res.json()),
+                getServerConfig: (serverNum) => fetch(`${API_BASE_URL}/server/${serverNum}/config`),
+                updateServerConfig: (serverNum, config) => fetch(`${API_BASE_URL}/server/${serverNum}/config`, { method: 'POST', body: JSON.stringify(config), headers: { 'Content-Type': 'application/json' } }).then(res => res.json()),
+                getSchedule: (serverNum) => fetch(`${API_BASE_URL}/server/${serverNum}/schedule`).then(res => res.json()),
+                updateSchedule: (serverNum, schedule) => fetch(`${API_BASE_URL}/server/${serverNum}/schedule`, { method: 'POST', body: JSON.stringify(schedule), headers: { 'Content-Type': 'application/json' } }).then(res => res.json())
+            };
+
+            const createServerBlock = (serverNum) => {
+                const isExtraServer = serverNum > 1;
+                const serverEl = document.createElement('div');
+                serverEl.id = `server-${serverNum}`;
+                serverEl.className = `server-block collapse collapse-arrow bg-base-200 shadow-md ${isExtraServer ? 'hidden' : ''}`;
+                
+                serverEl.innerHTML = `
+                    <input type="checkbox" class="peer" checked/>
+                    <div class="collapse-title text-xl font-medium peer-checked:bg-base-300">
+                        Server ${serverNum} <span id="server-status-${serverNum}" class="badge ml-2">Unknown</span>
+                    </div>
+                    <div class="collapse-content">
+                        <div class="p-4">
+                            <div class="flex items-center space-x-2 mb-4">
+                                <h3 class="text-lg">Controls:</h3>
+                                <button data-action="start" data-server="${serverNum}" class="btn btn-sm btn-success">Start</button>
+                                <button data-action="stop" data-server="${serverNum}" class="btn btn-sm btn-error">Stop</button>
+                                <button data-action="restart" data-server="${serverNum}" class="btn btn-sm btn-warning">Restart</button>
+                            </div>
+                            <div class="p-4 border border-base-300 rounded-md mb-6">
+                                <h3 class="text-lg font-bold mb-2">Daily Scheduled Restart (UTC)</h3>
+                                <div class="flex items-center space-x-4">
+                                    <div class="form-control">
+                                        <label class="label cursor-pointer space-x-2">
+                                            <span class="label-text">Enable</span>
+                                            <input type="checkbox" data-schedule="enabled" data-server="${serverNum}" class="toggle toggle-primary" />
+                                        </label>
+                                    </div>
+                                    <input type="time" data-schedule="time" data-server="${serverNum}" class="input input-bordered input-sm" />
+                                    <button data-action="save-schedule" data-server="${serverNum}" class="btn btn-sm btn-info">Save Schedule</button>
+                                </div>
+                            </div>
+                            <form id="form-server-${serverNum}" class="space-y-4">
+                                <h3 class="text-lg font-bold border-b border-base-300 pb-2">Config Settings</h3>
+                                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                    <div class="form-control"><label class="label"><span class="label-text">Server Name</span></label><input type="text" name="name" class="input input-bordered w-full" /></div>
+                                    <div class="form-control"><label class="label"><span class="label-text">Port</span></label><input type="number" name="port" class="input input-bordered w-full" /></div>
+                                    <div class="form-control"><label class="label"><span class="label-text">Ping Port</span></label><input type="number" name="pingPort" class="input input-bordered w-full" /></div>
+                                    <div class="form-control"><label class="label"><span class="label-text">Max Players</span></label><input type="number" name="maxPlayers" class="input input-bordered w-full" /></div>
+                                    <div class="form-control"><label class="label"><span class="label-text">Password</span></label><input type="text" name="password" class="input input-bordered w-full" /></div>
+                                    <div class="form-control"><label class="label"><span class="label-text">VOIP Enabled</span></label><select name="voip" class="select select-bordered"><option value="true">True</option><option value="false">False</option></select></div>
+                                </div>
+                                <div class="form-control">
+                                    <label class="label"><span class="label-text">Admin SteamIDs (comma separated)</span></label>
+                                    <input type="text" name="adminSteamIds" class="input input-bordered w-full" />
+                                </div>
+                                <h3 class="text-lg font-bold border-b border-base-300 pb-2 mt-6">Mods</h3>
+                                <div id="mods-container-${serverNum}" class="space-y-2"></div>
+                                <button type="button" class="btn btn-sm btn-outline btn-accent mt-2" id="add-mod-btn-${serverNum}">Add Mod</button>
+                                <div class="form-control mt-6">
+                                    <label class="label cursor-pointer justify-start space-x-2">
+                                        <input type="checkbox" class="checkbox" onchange="document.getElementById('advanced-settings-${serverNum}').classList.toggle('show')" />
+                                        <span class="label-text">Show Advanced Settings</span>
+                                    </label>
+                                </div>
+                                <div id="advanced-settings-${serverNum}" class="advanced-settings p-4 border border-base-300 rounded-md">
+                                    <h3 class="text-lg font-bold border-b border-base-300 pb-2 mb-4">Server Behavior</h3>
+                                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                        <div class="form-control"><label class="label cursor-pointer"><span class="label-text">Is Public</span><input type="checkbox" name="isPublic" class="toggle toggle-primary" /></label></div>
+                                        <div class="form-control"><label class="label cursor-pointer"><span class="label-text">Reload Banned IDs</span><input type="checkbox" name="reloadBannedSteamIds" class="toggle toggle-primary" /></label></div>
+                                        <div class="form-control"><label class="label cursor-pointer"><span class="label-text">Use Puck Banned IDs</span><input type="checkbox" name="usePuckBannedSteamIds" class="toggle toggle-primary" /></label></div>
+                                        <div class="form-control"><label class="label cursor-pointer"><span class="label-text">Print Metrics</span><input type="checkbox" name="printMetrics" class="toggle toggle-primary" /></label></div>
+                                        <div class="form-control"><label class="label cursor-pointer"><span class="label-text">Start Paused</span><input type="checkbox" name="startPaused" class="toggle toggle-primary" /></label></div>
+                                        <div class="form-control"><label class="label cursor-pointer"><span class="label-text">Allow Voting</span><input type="checkbox" name="allowVoting" class="toggle toggle-primary" /></label></div>
+                                    </div>
+                                    <h3 class="text-lg font-bold border-b border-base-300 pb-2 mt-6 mb-4">Timeouts & Ticks</h3>
+                                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                        <div class="form-control"><label class="label"><span class="label-text">Kick Timeout</span></label><input type="number" name="kickTimeout" class="input input-bordered w-full" /></div>
+                                        <div class="form-control"><label class="label"><span class="label-text">Sleep Timeout</span></label><input type="number" name="sleepTimeout" class="input input-bordered w-full" /></div>
+                                        <div class="form-control"><label class="label"><span class="label-text">Join Mid-Match Delay</span></label><input type="number" name="joinMidMatchDelay" class="input input-bordered w-full" /></div>
+                                        <div class="form-control"><label class="label"><span class="label-text">Target Frame Rate</span></label><input type="number" name="targetFrameRate" class="input input-bordered w-full" /></div>
+                                        <div class="form-control"><label class="label"><span class="label-text">Server Tick Rate</span></label><input type="number" name="serverTickRate" class="input input-bordered w-full" /></div>
+                                        <div class="form-control"><label class="label"><span class="label-text">Client Tick Rate</span></label><input type="number" name="clientTickRate" class="input input-bordered w-full" /></div>
+                                    </div>
+                                    <h3 class="text-lg font-bold border-b border-base-300 pb-2 mt-6 mb-4">Phase Durations</h3>
+                                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                        <div class="form-control"><label class="label"><span class="label-text">Warmup</span></label><input type="number" name="Warmup" class="input input-bordered w-full" /></div>
+                                        <div class="form-control"><label class="label"><span class="label-text">FaceOff</span></label><input type="number" name="FaceOff" class="input input-bordered w-full" /></div>
+                                        <div class="form-control"><label class="label"><span class="label-text">Playing</span></label><input type="number" name="Playing" class="input input-bordered w-full" /></div>
+                                        <div class="form-control"><label class="label"><span class="label-text">BlueScore</span></label><input type="number" name="BlueScore" class="input input-bordered w-full" /></div>
+                                        <div class="form-control"><label class="label"><span class="label-text">RedScore</span></label><input type="number" name="RedScore" class="input input-bordered w-full" /></div>
+                                        <div class="form-control"><label class="label"><span class="label-text">Replay</span></label><input type="number" name="Replay" class="input input-bordered w-full" /></div>
+                                        <div class="form-control"><label class="label"><span class="label-text">PeriodOver</span></label><input type="number" name="PeriodOver" class="input input-bordered w-full" /></div>
+                                        <div class="form-control"><label class="label"><span class="label-text">GameOver</span></label><input type="number" name="GameOver" class="input input-bordered w-full" /></div>
+                                    </div>
+                                </div>
+                                <div class="card-actions justify-end mt-4">
+                                    <button type="submit" class="btn btn-primary">Save Config</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                `;
+                serverContainer.appendChild(serverEl);
+                document.getElementById(`add-mod-btn-${serverNum}`).addEventListener('click', () => addModRow(serverNum));
+            };
+            
+            const addModRow = (serverNum, mod = { id: '', enabled: true, clientRequired: false }) => {
+                const container = document.getElementById(`mods-container-${serverNum}`);
+                const modRow = document.createElement('div');
+                modRow.className = 'mod-row flex items-center space-x-2 bg-base-300 p-2 rounded-md';
+                modRow.innerHTML = `
+                    <div class="form-control flex-grow"><input type="number" name="modId" placeholder="Mod ID" class="input input-sm input-bordered w-full" value="${mod.id || ''}"></div>
+                    <div class="form-control"><label class="label cursor-pointer space-x-1"><span class="label-text text-xs">Enabled</span><input type="checkbox" name="modEnabled" class="toggle toggle-sm toggle-success" ${mod.enabled ? 'checked' : ''}></label></div>
+                    <div class="form-control"><label class="label cursor-pointer space-x-1"><span class="label-text text-xs">Client Req.</span><input type="checkbox" name="modClientRequired" class="toggle toggle-sm toggle-warning" ${mod.clientRequired ? 'checked' : ''}></label></div>
+                    <button type="button" class="btn btn-sm btn-circle btn-outline btn-error" onclick="this.parentElement.remove()">X</button>
+                `;
+                container.appendChild(modRow);
+            };
+
+            const loadServerData = async (serverNum) => {
+                try {
+                    const response = await api.getServerConfig(serverNum);
+                    if (!response.ok) {
+                        if (response.status === 403) window.location.href = '/login.html'; 
+                        return;
+                    }
+                    const data = await response.json();
+                    const form = document.getElementById(`form-server-${serverNum}`);
+                    const config = data.config || {};
+                    const phaseMap = config.phaseDurationMap || {};
+
+                    form.elements.name.value = config.name || '';
+                    form.elements.port.value = config.port || '';
+                    form.elements.pingPort.value = config.pingPort || '';
+                    form.elements.maxPlayers.value = config.maxPlayers || '';
+                    form.elements.password.value = config.password || '';
+                    form.elements.voip.value = config.voip ? 'true' : 'false';
+                    form.elements.adminSteamIds.value = (config.adminSteamIds || []).join(', ');
+                    
+                    const modsContainer = document.getElementById(`mods-container-${serverNum}`);
+                    modsContainer.innerHTML = '';
+                    (config.mods || []).forEach(mod => addModRow(serverNum, mod));
+                    
+                    ['isPublic', 'reloadBannedSteamIds', 'usePuckBannedSteamIds', 'printMetrics', 'startPaused', 'allowVoting'].forEach(field => { if(form.elements[field]) form.elements[field].checked = config[field] || false; });
+                    ['kickTimeout', 'sleepTimeout', 'joinMidMatchDelay', 'targetFrameRate', 'serverTickRate', 'clientTickRate'].forEach(field => { if(form.elements[field]) form.elements[field].value = config[field] || ''; });
+                    Object.keys(phaseMap).forEach(key => { if (form.elements[key]) form.elements[key].value = phaseMap[key] || ''; });
+                    
+                    const statusBadge = document.getElementById(`server-status-${serverNum}`);
+                    statusBadge.textContent = data.status;
+                    statusBadge.className = `badge ml-2 ${data.status === 'active' ? 'badge-success' : 'badge-error'}`;
+
+                    const schedule = await api.getSchedule(serverNum);
+                    const serverBlock = document.getElementById(`server-${serverNum}`);
+                    serverBlock.querySelector('[data-schedule="enabled"]').checked = schedule.enabled;
+                    serverBlock.querySelector('[data-schedule="time"]').value = schedule.time || '00:00';
+
+                } catch (err) {
+                    console.error(`Error loading data for server ${serverNum}:`, err);
+                }
+            };
+
+            const collectAndSaveData = (serverNum, form) => {
+                const config = {
+                    adminSteamIds: form.elements.adminSteamIds.value.split(',').map(s => s.trim()).filter(Boolean),
+                    mods: [],
+                    phaseDurationMap: {},
+                };
+                ['name', 'password', 'port', 'pingPort', 'maxPlayers', 'kickTimeout', 'sleepTimeout', 'joinMidMatchDelay', 'targetFrameRate', 'serverTickRate', 'clientTickRate'].forEach(f => {
+                    const el = form.elements[f];
+                    if (!el) return;
+                    const val = el.value;
+                    config[f] = isNaN(parseInt(val, 10)) || ['name', 'password'].includes(f) ? val : parseInt(val, 10);
+                });
+                ['voip', 'isPublic', 'reloadBannedSteamIds', 'usePuckBannedSteamIds', 'printMetrics', 'startPaused', 'allowVoting'].forEach(f => {
+                    const el = form.elements[f];
+                    if (!el) return;
+                    config[f] = el.type === 'checkbox' ? el.checked : el.value === 'true';
+                });
+                const modRows = form.querySelectorAll('.mod-row');
+                modRows.forEach(row => {
+                    const id = parseInt(row.querySelector('[name=modId]').value, 10);
+                    if (!isNaN(id) && id > 0) {
+                        config.mods.push({ id: id, enabled: row.querySelector('[name=modEnabled]').checked, clientRequired: row.querySelector('[name=modClientRequired]').checked });
+                    }
+                });
+                ['Warmup', 'FaceOff', 'Playing', 'BlueScore', 'RedScore', 'Replay', 'PeriodOver', 'GameOver'].forEach(key => {
+                     const el = form.elements[key];
+                     if(el) config.phaseDurationMap[key] = parseInt(el.value, 10) || 0;
+                });
+                
+                const saveBtn = form.querySelector('button[type="submit"]');
+                saveBtn.classList.add('loading');
+                api.updateServerConfig(serverNum, config)
+                    .then(data => alert(`Server ${serverNum} config saved: ${data.message}`))
+                    .catch(err => alert(`Error saving config: ${err}`))
+                    .finally(() => saveBtn.classList.remove('loading'));
+            };
+
+            serverContainer.addEventListener('click', e => {
+                if (e.target.matches('button[data-action]')) {
+                    const { action, server } = e.target.dataset;
+                    
+                    if (action === 'save-schedule') {
+                        const serverBlock = document.getElementById(`server-${server}`);
+                        const schedule = {
+                            enabled: serverBlock.querySelector('[data-schedule="enabled"]').checked,
+                            time: serverBlock.querySelector('[data-schedule="time"]').value
+                        };
+                        e.target.classList.add('loading');
+                        api.updateSchedule(server, schedule)
+                            .then(data => alert(`Server ${server} schedule: ${data.message}`))
+                            .catch(err => alert(`Error saving schedule: ${err}`))
+                            .finally(() => e.target.classList.remove('loading'));
+                        return;
+                    }
+                    
+                    e.target.classList.add('loading');
+                    api.controlServer(server, action)
+                        .then(data => {
+                             alert(`Server ${server}: ${data.message}`);
+                             loadServerData(server);
+                        })
+                        .catch(err => alert(`Error: ${err}`))
+                        .finally(() => e.target.classList.remove('loading'));
+                }
+            });
+            
+             serverContainer.addEventListener('submit', e => {
+                e.preventDefault();
+                if (e.target.matches('form')) {
+                    const serverNum = e.target.id.split('-')[2];
+                    collectAndSaveData(serverNum, e.target);
+                }
+            });
+
+             showAllServersToggle.addEventListener('change', (e) => {
+                for (let i = 2; i <= 4; i++) {
+                    const serverEl = document.getElementById(`server-${i}`);
+                    if (serverEl) {
+                        serverEl.classList.toggle('hidden', !e.target.checked);
+                    }
+                }
+            });
+
+             installBtn.addEventListener('click', () => {
+                installBtn.classList.add('loading');
+                api.installServer().then(data => {
+                    alert(data.message);
+                    location.reload();
+                }).catch(err => alert(`Installation failed: ${err}`)).finally(() => installBtn.classList.remove('loading'));
+             });
+
+             logoutBtn.addEventListener('click', async () => {
+                try {
+                    const response = await fetch('/logout', { method: 'POST' });
+                    if (response.ok) {
+                        window.location.href = '/login.html';
+                    } else {
+                        alert('Logout failed. Please try again.');
+                    }
+                } catch (error) {
+                    console.error('Logout request failed:', error);
+                    alert('Logout failed due to a network error.');
+                }
+            });
+
+            const initialize = async () => {
+                 try {
+                    const response = await api.checkStatus();
+                    if (!response) { throw new Error('No response from status check'); }
+
+                    if (response.installed) {
+                        serversView.classList.remove('hidden');
+                        for (let i = 1; i <= 4; i++) {
+                            createServerBlock(i);
+                            await loadServerData(i);
+                        }
+                    } else {
+                        installView.classList.remove('hidden');
+                    }
+                    statusIndicator.textContent = 'Connected';
+                } catch(err) {
+                     statusIndicator.textContent = 'Connection Failed';
+                     console.error(err);
+                     if (err instanceof TypeError || (err.message && err.message.includes('Failed to fetch'))) {
+                         window.location.href = '/login.html';
+                     }
+                }
+            };
+            initialize();
+        });
+    </script>
+</body>
+</html>
+

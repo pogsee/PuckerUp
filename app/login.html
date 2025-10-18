@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="night">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - PuckerUp</title>
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@2.51.6/dist/full.css" rel="stylesheet" type="text/css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-base-100 text-base-content">
+    <div class="flex items-center justify-center min-h-screen">
+        <div class="card w-96 bg-base-200 shadow-xl">
+            <div class="card-body">
+                <h2 class="card-title justify-center text-2xl mb-4">PuckerUp Login</h2>
+                <!-- This form is now controlled by JavaScript -->
+                <form id="login-form">
+                    <div class="form-control">
+                        <label class="label">
+                            <span class="label-text">Password</span>
+                        </label>
+                        <input type="password" name="password" placeholder="Enter password" class="input input-bordered" required autofocus />
+                    </div>
+
+                    <div id="error-message" class="text-error text-sm text-center mt-2 hidden">
+                        Invalid password. Please try again.
+                    </div>
+
+                    <div class="form-control mt-6">
+                        <button type="submit" class="btn btn-primary">Login</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- REWRITTEN: JavaScript to handle login via API call -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const form = document.getElementById('login-form');
+            const errorMessage = document.getElementById('error-message');
+            const submitButton = form.querySelector('button[type="submit"]');
+
+            form.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                errorMessage.classList.add('hidden');
+                submitButton.classList.add('loading');
+
+                const password = form.elements.password.value;
+
+                try {
+                    const response = await fetch('/login', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ password })
+                    });
+
+                    if (response.ok) {
+                        // On successful login, redirect to the main application root.
+                        window.location.href = '/';
+                    } else {
+                        // If login fails (e.g., 401 Unauthorized), show error.
+                        errorMessage.classList.remove('hidden');
+                    }
+                } catch (error) {
+                    console.error('Login request failed:', error);
+                    errorMessage.textContent = 'Network error. Could not connect to server.';
+                    errorMessage.classList.remove('hidden');
+                } finally {
+                    submitButton.classList.remove('loading');
+                }
+            });
+        });
+    </script>
+</body>
+</html>
+
