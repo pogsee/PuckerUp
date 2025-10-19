@@ -32,3 +32,9 @@ The Daily Scheduled Restart option creates a file under /srv/puckserver/schedule
 Gafurix for the cool game https://steamcommunity.com/app/2994020
 VotePause and VoteForfeit mods by https://github.com/ViliamVadocz/
 Crash Exploit Fix by https://github.com/ckhawks
+
+## Example screenshot
+
+<img width="995" height="951" alt="Screenshot 2025-10-19 at 17 35 03" src="https://github.com/user-attachments/assets/30257e6b-c587-4d1e-93a1-55201293cbe0" />
+<img width="964" height="825" alt="Screenshot 2025-10-19 at 17 39 39" src="https://github.com/user-attachments/assets/76909865-3d8b-44ba-b5de-15f2289ef9c8" />
+
