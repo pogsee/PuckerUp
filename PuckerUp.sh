@@ -205,6 +205,10 @@ systemctl enable puckerup.service
 systemctl start puckerup.service
 echo -e "${GREEN}PuckerUp service created and started.${NC}"
 
+# steam being weird and not seeing steamclient.so in local directory, no idea why
+mkdir -p /home/puck/.steam/sdk64
+ln -s /srv/puckserver/steamclient.so /home/puck/.steam/sdk64/steamclient.so
+
 # 8. Final Instructions
 IP_ADDRESS=$(hostname -I | awk '{print $1}')
 print_heading "Installation Complete!"
@@ -218,4 +222,3 @@ echo -e "The randomly generated password for your actual puck servers is:"
 echo -e "    Puck Server Password: ${GREEN}${GAME_PASSWORD}${NC}"
 echo ""
 echo -e "Thank you for using PuckerUp!"
-
