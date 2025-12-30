@@ -93,6 +93,11 @@ apt install -y steamcmd
 # 4. Puck Server Installation
 print_heading "Installing Puck Dedicated Server"
 mkdir -p /srv/puckserver
+
+# PASS 1: Update the App Info and structure (ignoring errors)
+/usr/games/steamcmd +force_install_dir /srv/puckserver +login anonymous +app_info_update 1 +quit || true
+
+# PASS 2: Install the server
 /usr/games/steamcmd +force_install_dir /srv/puckserver +login anonymous +app_update 3481440 validate +quit
 
 print_heading "Creating 'puck' System User"
