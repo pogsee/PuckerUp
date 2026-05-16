@@ -121,7 +121,7 @@ User=puck
 Group=puck
 # The game server binary requires a start_server.sh script to run.
 # This is a common pattern for Unity games.
-ExecStart=/srv/puckserver/Puck.x86_64 --serverConfigPath %i.json
+ExecStart=/srv/puckserver/Puck --serverConfigPath %i.json
 Restart=on-failure
 RestartSec=10
 

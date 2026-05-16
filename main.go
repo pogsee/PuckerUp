@@ -20,7 +20,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-const puckServerPath = "/srv/puckserver/Puck.x86_64"
+const puckServerPath = "/srv/puckserver/Puck"
 const passwordFilePath = "/srv/puckserver/.puckerup_password"
 const configBasePath = "/srv/puckserver"
 const publicGameModeConfigPath = "/srv/puckserver/public_game_mode_config.json"
