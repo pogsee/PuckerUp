@@ -203,6 +203,8 @@ chmod +x /srv/PuckerUp/puckerup-passwd
 # 6. Generate PuckerUp Admin Password
 print_heading "Generating Admin Panel Password"
 ADMIN_PASSWORD=$(/srv/PuckerUp/puckerup-passwd)
+echo -e "    PuckerUp password: ${GREEN}${ADMIN_PASSWORD}${NC}"
+echo -e "    ${YELLOW}SAVE THIS PASSWORD. It will also be shown again if installation completes.${NC}"
 
 # 7. Setup PuckerUp Systemd Service
 print_heading "Creating PuckerUp Systemd Service"
@@ -230,7 +232,13 @@ echo -e "${GREEN}PuckerUp service created and started.${NC}"
 
 # steam being weird and not seeing steamclient.so in local directory, no idea why
 mkdir -p /home/puck/.steam/sdk64
-ln -s /srv/puckserver/steamclient.so /home/puck/.steam/sdk64/steamclient.so
+STEAMCLIENT_TARGET="/srv/puckserver/steamclient.so"
+STEAMCLIENT_LINK="/home/puck/.steam/sdk64/steamclient.so"
+if [ -L "$STEAMCLIENT_LINK" ] || [ ! -e "$STEAMCLIENT_LINK" ]; then
+    ln -sfn "$STEAMCLIENT_TARGET" "$STEAMCLIENT_LINK"
+else
+    echo -e "${YELLOW}${STEAMCLIENT_LINK} already exists and is not a symlink. Leaving it unchanged.${NC}"
+fi
 
 # 8. Final Instructions
 IP_ADDRESS=$(hostname -I | awk '{print $1}')
