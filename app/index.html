@@ -64,40 +64,39 @@
         </div>
 
         <div id="servers-view" class="hidden">
-            <div class="card bg-base-200 shadow-md mb-6">
-                <div class="card-body">
-                    <h2 class="card-title text-xl">Public Game Mode</h2>
-                    <p class="text-sm opacity-75">Shared settings from public_game_mode_config.json.</p>
-                    <form id="game-mode-form" class="space-y-4">
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div class="form-control"><label class="label"><span class="label-text">Spawn Delay</span></label><input type="number" name="spawnDelay" class="input input-bordered w-full" /></div>
-                            <div class="form-control"><label class="label"><span class="label-text">Max Periods</span></label><input type="number" name="maxPeriods" class="input input-bordered w-full" /></div>
-                        </div>
-                        <h3 class="text-lg font-bold border-b border-base-300 pb-2 mt-6">Phase Durations</h3>
-                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                            <div class="form-control"><label class="label"><span class="label-text">None</span></label><input type="number" name="None" class="input input-bordered w-full" /></div>
-                            <div class="form-control"><label class="label"><span class="label-text">Warmup</span></label><input type="number" name="Warmup" class="input input-bordered w-full" /></div>
-                            <div class="form-control"><label class="label"><span class="label-text">PreGame</span></label><input type="number" name="PreGame" class="input input-bordered w-full" /></div>
-                            <div class="form-control"><label class="label"><span class="label-text">FaceOff</span></label><input type="number" name="FaceOff" class="input input-bordered w-full" /></div>
-                            <div class="form-control"><label class="label"><span class="label-text">Play</span></label><input type="number" name="Play" class="input input-bordered w-full" /></div>
-                            <div class="form-control"><label class="label"><span class="label-text">BlueScore</span></label><input type="number" name="BlueScore" class="input input-bordered w-full" /></div>
-                            <div class="form-control"><label class="label"><span class="label-text">RedScore</span></label><input type="number" name="RedScore" class="input input-bordered w-full" /></div>
-                            <div class="form-control"><label class="label"><span class="label-text">Replay</span></label><input type="number" name="Replay" class="input input-bordered w-full" /></div>
-                            <div class="form-control"><label class="label"><span class="label-text">Intermission</span></label><input type="number" name="Intermission" class="input input-bordered w-full" /></div>
-                            <div class="form-control"><label class="label"><span class="label-text">GameOver</span></label><input type="number" name="GameOver" class="input input-bordered w-full" /></div>
-                            <div class="form-control"><label class="label"><span class="label-text">PostGame</span></label><input type="number" name="PostGame" class="input input-bordered w-full" /></div>
-                        </div>
-                        <div class="card-actions justify-end mt-4">
-                            <button type="submit" class="btn btn-primary">Save Public Game Mode</button>
-                        </div>
-                    </form>
+            <div class="server-block collapse collapse-arrow bg-base-200 shadow-md mb-6">
+                <input type="checkbox" class="peer" />
+                <div class="collapse-title text-xl font-medium peer-checked:bg-base-300">
+                    Public Game Mode
                 </div>
-            </div>
-            <div class="form-control w-52 mb-6">
-                <label class="cursor-pointer label">
-                    <span class="label-text">Show All Servers</span>
-                    <input type="checkbox" class="toggle toggle-primary" id="show-all-servers-toggle" />
-                </label>
+                <div class="collapse-content">
+                    <div class="p-4">
+                        <p class="text-sm opacity-75 mb-4">Shared settings from public_game_mode_config.json.</p>
+                        <form id="game-mode-form" class="space-y-4">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div class="form-control"><label class="label"><span class="label-text">Spawn Delay</span></label><input type="number" name="spawnDelay" class="input input-bordered w-full" /></div>
+                                <div class="form-control"><label class="label"><span class="label-text">Max Periods</span></label><input type="number" name="maxPeriods" class="input input-bordered w-full" /></div>
+                            </div>
+                            <h3 class="text-lg font-bold border-b border-base-300 pb-2 mt-6">Phase Durations</h3>
+                            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                <div class="form-control"><label class="label"><span class="label-text">None</span></label><input type="number" name="None" class="input input-bordered w-full" /></div>
+                                <div class="form-control"><label class="label"><span class="label-text">Warmup</span></label><input type="number" name="Warmup" class="input input-bordered w-full" /></div>
+                                <div class="form-control"><label class="label"><span class="label-text">PreGame</span></label><input type="number" name="PreGame" class="input input-bordered w-full" /></div>
+                                <div class="form-control"><label class="label"><span class="label-text">FaceOff</span></label><input type="number" name="FaceOff" class="input input-bordered w-full" /></div>
+                                <div class="form-control"><label class="label"><span class="label-text">Play</span></label><input type="number" name="Play" class="input input-bordered w-full" /></div>
+                                <div class="form-control"><label class="label"><span class="label-text">BlueScore</span></label><input type="number" name="BlueScore" class="input input-bordered w-full" /></div>
+                                <div class="form-control"><label class="label"><span class="label-text">RedScore</span></label><input type="number" name="RedScore" class="input input-bordered w-full" /></div>
+                                <div class="form-control"><label class="label"><span class="label-text">Replay</span></label><input type="number" name="Replay" class="input input-bordered w-full" /></div>
+                                <div class="form-control"><label class="label"><span class="label-text">Intermission</span></label><input type="number" name="Intermission" class="input input-bordered w-full" /></div>
+                                <div class="form-control"><label class="label"><span class="label-text">GameOver</span></label><input type="number" name="GameOver" class="input input-bordered w-full" /></div>
+                                <div class="form-control"><label class="label"><span class="label-text">PostGame</span></label><input type="number" name="PostGame" class="input input-bordered w-full" /></div>
+                            </div>
+                            <div class="card-actions justify-end mt-4">
+                                <button type="submit" class="btn btn-primary">Save Config</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
             </div>
             <div id="server-container" class="space-y-6"></div>
         </div>
@@ -129,7 +128,6 @@
             const installBtn = document.getElementById('install-btn');
             const serverContainer = document.getElementById('server-container');
             const gameModeForm = document.getElementById('game-mode-form');
-            const showAllServersToggle = document.getElementById('show-all-servers-toggle');
             const statusIndicator = document.getElementById('status-indicator');
             const logoutBtn = document.getElementById('logout-btn');
 
@@ -149,13 +147,13 @@
             };
 
             const createServerBlock = (serverNum) => {
-                const isExtraServer = serverNum > 1;
                 const serverEl = document.createElement('div');
                 serverEl.id = `server-${serverNum}`;
-                serverEl.className = `server-block collapse collapse-arrow bg-base-200 shadow-md ${isExtraServer ? 'hidden' : ''}`;
+                serverEl.className = 'server-block collapse collapse-arrow bg-base-200 shadow-md';
+                const checkedAttr = serverNum === 1 ? 'checked' : '';
                 
                 serverEl.innerHTML = `
-                    <input type="checkbox" class="peer" checked/>
+                    <input type="checkbox" class="peer" ${checkedAttr}/>
                     <div class="collapse-title text-xl font-medium peer-checked:bg-base-300">
                         Server ${serverNum} <span id="server-status-${serverNum}" class="badge ml-2">Unknown</span>
                     </div>
@@ -397,15 +395,6 @@
             gameModeForm.addEventListener('submit', e => {
                 e.preventDefault();
                 collectAndSavePublicGameModeConfig();
-            });
-
-             showAllServersToggle.addEventListener('change', (e) => {
-                for (let i = 2; i <= 4; i++) {
-                    const serverEl = document.getElementById(`server-${i}`);
-                    if (serverEl) {
-                        serverEl.classList.toggle('hidden', !e.target.checked);
-                    }
-                }
             });
 
              installBtn.addEventListener('click', () => {
