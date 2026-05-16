@@ -41,9 +41,9 @@ type PhaseDurationMap struct {
 	PostGame     int `json:"PostGame"`
 }
 type Mod struct {
-	ID             int64 `json:"id"`
-	Enabled        bool  `json:"enabled"`
-	ClientRequired bool  `json:"clientRequired"`
+	ID             string `json:"id"`
+	Enabled        bool   `json:"enabled"`
+	ClientRequired bool   `json:"clientRequired"`
 }
 type ServerConfig struct {
 	Port                  int      `json:"port"`
@@ -62,7 +62,7 @@ type ServerConfig struct {
 	KickTimeout           int      `json:"kickTimeout"`
 	SleepTimeout          int      `json:"sleepTimeout"`
 	JoinMidMatchDelay     int      `json:"joinMidMatchDelay"`
-	ClientTickRate        int      `json:"clientTickRate"`
+	TickRate              int      `json:"tickRate"`
 	StartPaused           bool     `json:"startPaused"`
 	AllowVoting           bool     `json:"allowVoting"`
 	Mods                  []Mod    `json:"mods"`
@@ -291,7 +291,7 @@ func defaultServerConfig(serverNum string) ServerConfig {
 		KickTimeout:           1800,
 		SleepTimeout:          900,
 		JoinMidMatchDelay:     10,
-		ClientTickRate:        360,
+		TickRate:              360,
 		StartPaused:           false,
 		AllowVoting:           true,
 		Mods:                  []Mod{},

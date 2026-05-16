@@ -213,12 +213,12 @@
                                         <div class="form-control"><label class="label"><span class="label-text">Game Mode</span></label><input type="text" name="gameMode" class="input input-bordered w-full" /></div>
                                         <div class="form-control"><label class="label"><span class="label-text">Level</span></label><input type="text" name="level" class="input input-bordered w-full" /></div>
                                     </div>
-                                    <h3 class="text-lg font-bold border-b border-base-300 pb-2 mt-6 mb-4">Timeouts & Client Tick</h3>
+                                    <h3 class="text-lg font-bold border-b border-base-300 pb-2 mt-6 mb-4">Timeouts & Tick Rate</h3>
                                      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                         <div class="form-control"><label class="label"><span class="label-text">Kick Timeout</span></label><input type="number" name="kickTimeout" class="input input-bordered w-full" /></div>
                                         <div class="form-control"><label class="label"><span class="label-text">Sleep Timeout</span></label><input type="number" name="sleepTimeout" class="input input-bordered w-full" /></div>
                                         <div class="form-control"><label class="label"><span class="label-text">Join Mid-Match Delay</span></label><input type="number" name="joinMidMatchDelay" class="input input-bordered w-full" /></div>
-                                        <div class="form-control"><label class="label"><span class="label-text">Client Tick Rate</span></label><input type="number" name="clientTickRate" class="input input-bordered w-full" /></div>
+                                        <div class="form-control"><label class="label"><span class="label-text">Tick Rate</span></label><input type="number" name="tickRate" class="input input-bordered w-full" /></div>
                                     </div>
                                 </div>
                                 <div class="card-actions justify-end mt-4">
@@ -237,7 +237,7 @@
                 const modRow = document.createElement('div');
                 modRow.className = 'mod-row flex items-center space-x-2 bg-base-300 p-2 rounded-md';
                 modRow.innerHTML = `
-                    <div class="form-control flex-grow"><input type="number" name="modId" placeholder="Mod ID" class="input input-sm input-bordered w-full" value="${mod.id || ''}"></div>
+                    <div class="form-control flex-grow"><input type="text" name="modId" placeholder="Mod ID" class="input input-sm input-bordered w-full" value="${mod.id || ''}"></div>
                     <div class="form-control"><label class="label cursor-pointer space-x-1"><span class="label-text text-xs">Enabled</span><input type="checkbox" name="modEnabled" class="toggle toggle-sm toggle-success" ${mod.enabled ? 'checked' : ''}></label></div>
                     <div class="form-control"><label class="label cursor-pointer space-x-1"><span class="label-text text-xs">Client Req.</span><input type="checkbox" name="modClientRequired" class="toggle toggle-sm toggle-warning" ${mod.clientRequired ? 'checked' : ''}></label></div>
                     <button type="button" class="btn btn-sm btn-circle btn-outline btn-error" onclick="this.parentElement.remove()">X</button>
@@ -307,7 +307,7 @@
                     ['isPublic', 'useWhitelist', 'reloadBannedSteamIds', 'usePuckBannedSteamIds', 'printMetrics', 'startPaused', 'allowVoting'].forEach(field => {
                         if(form.elements[field]) form.elements[field].checked = config[field] ?? (field === 'useWhitelist' ? true : false);
                     });
-                    ['kickTimeout', 'sleepTimeout', 'joinMidMatchDelay', 'clientTickRate'].forEach(field => { if(form.elements[field]) form.elements[field].value = config[field] || ''; });
+                    ['kickTimeout', 'sleepTimeout', 'joinMidMatchDelay', 'tickRate'].forEach(field => { if(form.elements[field]) form.elements[field].value = config[field] || ''; });
                     
                     const statusBadge = document.getElementById(`server-status-${serverNum}`);
                     statusBadge.textContent = data.status;
@@ -328,7 +328,7 @@
                     adminSteamIds: form.elements.adminSteamIds.value.split(',').map(s => s.trim()).filter(Boolean),
                     mods: [],
                 };
-                ['name', 'password', 'gameMode', 'level', 'port', 'maxPlayers', 'kickTimeout', 'sleepTimeout', 'joinMidMatchDelay', 'clientTickRate'].forEach(f => {
+                ['name', 'password', 'gameMode', 'level', 'port', 'maxPlayers', 'kickTimeout', 'sleepTimeout', 'joinMidMatchDelay', 'tickRate'].forEach(f => {
                     const el = form.elements[f];
                     if (!el) return;
                     const val = el.value;
@@ -341,8 +341,8 @@
                 });
                 const modRows = form.querySelectorAll('.mod-row');
                 modRows.forEach(row => {
-                    const id = parseInt(row.querySelector('[name=modId]').value, 10);
-                    if (!isNaN(id) && id > 0) {
+                    const id = row.querySelector('[name=modId]').value.trim();
+                    if (id) {
                         config.mods.push({ id: id, enabled: row.querySelector('[name=modEnabled]').checked, clientRequired: row.querySelector('[name=modClientRequired]').checked });
                     }
                 });

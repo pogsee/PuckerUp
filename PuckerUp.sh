@@ -154,13 +154,13 @@ for i in {1..4}; do
   "kickTimeout": 1800,
   "sleepTimeout": 900,
   "joinMidMatchDelay": 10,
-  "clientTickRate": 360,
+  "tickRate": 360,
   "startPaused": false,
   "allowVoting": true,
   "mods": [
-    {"id": 3497097214, "enabled": true, "clientRequired": false},
-    {"id": 3497344177, "enabled": true, "clientRequired": false},
-    {"id": 3503065207, "enabled": true, "clientRequired": true}
+    {"id": "3497097214", "enabled": true, "clientRequired": false},
+    {"id": "3497344177", "enabled": true, "clientRequired": false},
+    {"id": "3503065207", "enabled": true, "clientRequired": true}
   ]
 }
 EOF
