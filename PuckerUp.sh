@@ -121,7 +121,7 @@ User=puck
 Group=puck
 # The game server binary requires a start_server.sh script to run.
 # This is a common pattern for Unity games.
-ExecStart=/srv/puckserver/Puck.x86_64 --serverConfigurationPath %i.json
+ExecStart=/srv/puckserver/Puck.x86_64 --serverConfigPath %i.json
 Restart=on-failure
 RestartSec=10
 
@@ -135,17 +135,18 @@ print_heading "Generating Initial Server Config Files"
 GAME_PASSWORD=$(tr -dc 'A-Za-z0-9' < /dev/urandom | head -c 12)
 
 for i in {1..4}; do
-    port=$((7777 + (i-1)*2))
-    pingPort=$((7778 + (i-1)*2))
+    port=$((30609 + (i-1)))
     cat > "/srv/puckserver/server${i}.json" <<EOF
 {
   "port": ${port},
-  "pingPort": ${pingPort},
   "name": "Puck Server ${i}",
   "maxPlayers": 10,
   "password": "${GAME_PASSWORD}",
-  "voip": false,
+  "useVoip": false,
   "isPublic": true,
+  "useWhitelist": true,
+  "gameMode": "public",
+  "level": "default",
   "adminSteamIds": [],
   "reloadBannedSteamIds": true,
   "usePuckBannedSteamIds": true,
@@ -153,12 +154,9 @@ for i in {1..4}; do
   "kickTimeout": 1800,
   "sleepTimeout": 900,
   "joinMidMatchDelay": 10,
-  "targetFrameRate": 380,
-  "serverTickRate": 360,
   "clientTickRate": 360,
   "startPaused": false,
   "allowVoting": true,
-  "phaseDurationMap": {"Warmup":600,"FaceOff":3,"Playing":300,"BlueScore":5,"RedScore":5,"Replay":10,"PeriodOver":15,"GameOver":15},
   "mods": [
     {"id": 3497097214, "enabled": true, "clientRequired": false},
     {"id": 3497344177, "enabled": true, "clientRequired": false},
@@ -167,8 +165,28 @@ for i in {1..4}; do
 }
 EOF
 done
+
+cat > "/srv/puckserver/public_game_mode_config.json" <<'EOF'
+{
+  "phaseDurationMap": {
+    "None": 0,
+    "Warmup": 60,
+    "PreGame": 10,
+    "FaceOff": 5,
+    "Play": 300,
+    "BlueScore": 5,
+    "RedScore": 5,
+    "Replay": 10,
+    "Intermission": 10,
+    "GameOver": 30,
+    "PostGame": 10
+  },
+  "spawnDelay": 5,
+  "maxPeriods": 3
+}
+EOF
 chown puck:puck /srv/puckserver/*.json
-echo -e "${GREEN}Default config files created for servers 1-4.${NC}"
+echo -e "${GREEN}Default config files created for servers 1-4 and public game mode.${NC}"
 
 # 5. PuckerUp Admin Panel Installation
 print_heading "Downloading and Installing PuckerUp Admin Panel"

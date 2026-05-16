@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -22,18 +23,22 @@ import (
 const puckServerPath = "/srv/puckserver/Puck.x86_64"
 const passwordFilePath = "/srv/puckserver/.puckerup_password"
 const configBasePath = "/srv/puckserver"
+const publicGameModeConfigPath = "/srv/puckserver/public_game_mode_config.json"
 const schedulesFilePath = "/srv/puckserver/schedules.json"
 
 // --- Server Config Structures to match the JSON file ---
 type PhaseDurationMap struct {
-	Warmup     int `json:"Warmup"`
-	FaceOff    int `json:"FaceOff"`
-	Playing    int `json:"Playing"`
-	BlueScore  int `json:"BlueScore"`
-	RedScore   int `json:"RedScore"`
-	Replay     int `json:"Replay"`
-	PeriodOver int `json:"PeriodOver"`
-	GameOver   int `json:"GameOver"`
+	None         int `json:"None"`
+	Warmup       int `json:"Warmup"`
+	PreGame      int `json:"PreGame"`
+	FaceOff      int `json:"FaceOff"`
+	Play         int `json:"Play"`
+	BlueScore    int `json:"BlueScore"`
+	RedScore     int `json:"RedScore"`
+	Replay       int `json:"Replay"`
+	Intermission int `json:"Intermission"`
+	GameOver     int `json:"GameOver"`
+	PostGame     int `json:"PostGame"`
 }
 type Mod struct {
 	ID             int64 `json:"id"`
@@ -41,27 +46,31 @@ type Mod struct {
 	ClientRequired bool  `json:"clientRequired"`
 }
 type ServerConfig struct {
-	Port                  int              `json:"port"`
-	PingPort              int              `json:"pingPort"`
-	Name                  string           `json:"name"`
-	MaxPlayers            int              `json:"maxPlayers"`
-	Password              string           `json:"password"`
-	Voip                  bool             `json:"voip"`
-	IsPublic              bool             `json:"isPublic"`
-	AdminSteamIds         []string         `json:"adminSteamIds"`
-	ReloadBannedSteamIds  bool             `json:"reloadBannedSteamIds"`
-	UsePuckBannedSteamIds bool             `json:"usePuckBannedSteamIds"`
-	PrintMetrics          bool             `json:"printMetrics"`
-	KickTimeout           int              `json:"kickTimeout"`
-	SleepTimeout          int              `json:"sleepTimeout"`
-	JoinMidMatchDelay     int              `json:"joinMidMatchDelay"`
-	TargetFrameRate       int              `json:"targetFrameRate"`
-	ServerTickRate        int              `json:"serverTickRate"`
-	ClientTickRate        int              `json:"clientTickRate"`
-	StartPaused           bool             `json:"startPaused"`
-	AllowVoting           bool             `json:"allowVoting"`
-	PhaseDurationMap      PhaseDurationMap `json:"phaseDurationMap"`
-	Mods                  []Mod            `json:"mods"`
+	Port                  int      `json:"port"`
+	Name                  string   `json:"name"`
+	MaxPlayers            int      `json:"maxPlayers"`
+	Password              string   `json:"password"`
+	UseVoip               bool     `json:"useVoip"`
+	IsPublic              bool     `json:"isPublic"`
+	UseWhitelist          bool     `json:"useWhitelist"`
+	GameMode              string   `json:"gameMode"`
+	Level                 string   `json:"level"`
+	AdminSteamIds         []string `json:"adminSteamIds"`
+	ReloadBannedSteamIds  bool     `json:"reloadBannedSteamIds"`
+	UsePuckBannedSteamIds bool     `json:"usePuckBannedSteamIds"`
+	PrintMetrics          bool     `json:"printMetrics"`
+	KickTimeout           int      `json:"kickTimeout"`
+	SleepTimeout          int      `json:"sleepTimeout"`
+	JoinMidMatchDelay     int      `json:"joinMidMatchDelay"`
+	ClientTickRate        int      `json:"clientTickRate"`
+	StartPaused           bool     `json:"startPaused"`
+	AllowVoting           bool     `json:"allowVoting"`
+	Mods                  []Mod    `json:"mods"`
+}
+type PublicGameModeConfig struct {
+	PhaseDurationMap PhaseDurationMap `json:"phaseDurationMap"`
+	SpawnDelay       int              `json:"spawnDelay"`
+	MaxPeriods       int              `json:"maxPeriods"`
 }
 
 // --- NEW: Rate Limiter ---
@@ -240,12 +249,102 @@ func installHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]string{"message": "Installation complete! The page will now reload."})
 }
 
+func defaultPublicGameModeConfig() PublicGameModeConfig {
+	return PublicGameModeConfig{
+		PhaseDurationMap: PhaseDurationMap{
+			None:         0,
+			Warmup:       60,
+			PreGame:      10,
+			FaceOff:      5,
+			Play:         300,
+			BlueScore:    5,
+			RedScore:     5,
+			Replay:       10,
+			Intermission: 10,
+			GameOver:     30,
+			PostGame:     10,
+		},
+		SpawnDelay: 5,
+		MaxPeriods: 3,
+	}
+}
+
+func defaultServerConfig(serverNum string) ServerConfig {
+	port := 30609
+	if num, err := strconv.Atoi(serverNum); err == nil && num > 1 {
+		port += num - 1
+	}
+
+	return ServerConfig{
+		Port:                  port,
+		Name:                  fmt.Sprintf("Puck Server %s", serverNum),
+		MaxPlayers:            10,
+		UseVoip:               false,
+		IsPublic:              true,
+		UseWhitelist:          true,
+		GameMode:              "public",
+		Level:                 "default",
+		AdminSteamIds:         []string{},
+		ReloadBannedSteamIds:  true,
+		UsePuckBannedSteamIds: true,
+		PrintMetrics:          true,
+		KickTimeout:           1800,
+		SleepTimeout:          900,
+		JoinMidMatchDelay:     10,
+		ClientTickRate:        360,
+		StartPaused:           false,
+		AllowVoting:           true,
+		Mods:                  []Mod{},
+	}
+}
+
+func getPublicGameModeConfigHandler(w http.ResponseWriter, r *http.Request) {
+	config := defaultPublicGameModeConfig()
+	file, err := os.ReadFile(publicGameModeConfigPath)
+	if err == nil {
+		if err := json.Unmarshal(file, &config); err != nil {
+			http.Error(w, "Invalid public game mode config", http.StatusInternalServerError)
+			return
+		}
+	} else if !os.IsNotExist(err) {
+		log.Printf("Failed to read public game mode config: %v", err)
+		http.Error(w, "Failed to read public game mode config", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(config)
+}
+
+func updatePublicGameModeConfigHandler(w http.ResponseWriter, r *http.Request) {
+	var config PublicGameModeConfig
+	if err := json.NewDecoder(r.Body).Decode(&config); err != nil {
+		http.Error(w, "Invalid JSON", http.StatusBadRequest)
+		return
+	}
+
+	var buffer bytes.Buffer
+	encoder := json.NewEncoder(&buffer)
+	encoder.SetEscapeHTML(false)
+	encoder.SetIndent("", "  ")
+	encoder.Encode(config)
+
+	if err := os.WriteFile(publicGameModeConfigPath, buffer.Bytes(), 0644); err != nil {
+		log.Printf("Failed to write public game mode config: %v", err)
+		http.Error(w, "Failed to save public game mode config", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{"message": "Public game mode config saved successfully!"})
+}
+
 func getServerConfigHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	serverNum := vars["serverNum"]
 	configFile := filepath.Join(configBasePath, fmt.Sprintf("server%s.json", serverNum))
 
-	var config ServerConfig
+	config := defaultServerConfig(serverNum)
 	file, err := os.ReadFile(configFile)
 	if err == nil {
 		json.Unmarshal(file, &config)
@@ -396,6 +495,8 @@ func main() {
 	api.Use(authMiddleware)
 	api.HandleFunc("/status", statusHandler)
 	api.HandleFunc("/install", installHandler).Methods("POST")
+	api.HandleFunc("/public-game-mode-config", getPublicGameModeConfigHandler).Methods("GET")
+	api.HandleFunc("/public-game-mode-config", updatePublicGameModeConfigHandler).Methods("POST")
 	api.HandleFunc("/server/{serverNum}/config", getServerConfigHandler).Methods("GET")
 	api.HandleFunc("/server/{serverNum}/config", updateServerConfigHandler).Methods("POST")
 	api.HandleFunc("/server/{serverNum}/control", serverControlHandler).Methods("POST")
@@ -413,9 +514,8 @@ func main() {
 	if !exists {
 		port = "8080"
 	}
-	
+
 	listenAddr := ":" + port
 	fmt.Printf("Starting PuckerUp server on http://0.0.0.0%s\n", listenAddr)
 	log.Fatal(http.ListenAndServe(listenAddr, r))
 }
-

@@ -64,6 +64,35 @@
         </div>
 
         <div id="servers-view" class="hidden">
+            <div class="card bg-base-200 shadow-md mb-6">
+                <div class="card-body">
+                    <h2 class="card-title text-xl">Public Game Mode</h2>
+                    <p class="text-sm opacity-75">Shared settings from public_game_mode_config.json.</p>
+                    <form id="game-mode-form" class="space-y-4">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div class="form-control"><label class="label"><span class="label-text">Spawn Delay</span></label><input type="number" name="spawnDelay" class="input input-bordered w-full" /></div>
+                            <div class="form-control"><label class="label"><span class="label-text">Max Periods</span></label><input type="number" name="maxPeriods" class="input input-bordered w-full" /></div>
+                        </div>
+                        <h3 class="text-lg font-bold border-b border-base-300 pb-2 mt-6">Phase Durations</h3>
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            <div class="form-control"><label class="label"><span class="label-text">None</span></label><input type="number" name="None" class="input input-bordered w-full" /></div>
+                            <div class="form-control"><label class="label"><span class="label-text">Warmup</span></label><input type="number" name="Warmup" class="input input-bordered w-full" /></div>
+                            <div class="form-control"><label class="label"><span class="label-text">PreGame</span></label><input type="number" name="PreGame" class="input input-bordered w-full" /></div>
+                            <div class="form-control"><label class="label"><span class="label-text">FaceOff</span></label><input type="number" name="FaceOff" class="input input-bordered w-full" /></div>
+                            <div class="form-control"><label class="label"><span class="label-text">Play</span></label><input type="number" name="Play" class="input input-bordered w-full" /></div>
+                            <div class="form-control"><label class="label"><span class="label-text">BlueScore</span></label><input type="number" name="BlueScore" class="input input-bordered w-full" /></div>
+                            <div class="form-control"><label class="label"><span class="label-text">RedScore</span></label><input type="number" name="RedScore" class="input input-bordered w-full" /></div>
+                            <div class="form-control"><label class="label"><span class="label-text">Replay</span></label><input type="number" name="Replay" class="input input-bordered w-full" /></div>
+                            <div class="form-control"><label class="label"><span class="label-text">Intermission</span></label><input type="number" name="Intermission" class="input input-bordered w-full" /></div>
+                            <div class="form-control"><label class="label"><span class="label-text">GameOver</span></label><input type="number" name="GameOver" class="input input-bordered w-full" /></div>
+                            <div class="form-control"><label class="label"><span class="label-text">PostGame</span></label><input type="number" name="PostGame" class="input input-bordered w-full" /></div>
+                        </div>
+                        <div class="card-actions justify-end mt-4">
+                            <button type="submit" class="btn btn-primary">Save Public Game Mode</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
             <div class="form-control w-52 mb-6">
                 <label class="cursor-pointer label">
                     <span class="label-text">Show All Servers</span>
@@ -99,15 +128,19 @@
             const serversView = document.getElementById('servers-view');
             const installBtn = document.getElementById('install-btn');
             const serverContainer = document.getElementById('server-container');
+            const gameModeForm = document.getElementById('game-mode-form');
             const showAllServersToggle = document.getElementById('show-all-servers-toggle');
             const statusIndicator = document.getElementById('status-indicator');
             const logoutBtn = document.getElementById('logout-btn');
 
             const API_BASE_URL = '/api';
+            const PHASE_FIELDS = ['None', 'Warmup', 'PreGame', 'FaceOff', 'Play', 'BlueScore', 'RedScore', 'Replay', 'Intermission', 'GameOver', 'PostGame'];
 
             const api = {
                 checkStatus: () => fetch(`${API_BASE_URL}/status`).then(res => res.json()),
                 installServer: () => fetch(`${API_BASE_URL}/install`, { method: 'POST' }).then(res => res.json()),
+                getPublicGameModeConfig: () => fetch(`${API_BASE_URL}/public-game-mode-config`),
+                updatePublicGameModeConfig: (config) => fetch(`${API_BASE_URL}/public-game-mode-config`, { method: 'POST', body: JSON.stringify(config), headers: { 'Content-Type': 'application/json' } }).then(res => res.json()),
                 controlServer: (serverNum, action) => fetch(`${API_BASE_URL}/server/${serverNum}/control`, { method: 'POST', body: JSON.stringify({ action }), headers: { 'Content-Type': 'application/json' } }).then(res => res.json()),
                 getServerConfig: (serverNum) => fetch(`${API_BASE_URL}/server/${serverNum}/config`),
                 updateServerConfig: (serverNum, config) => fetch(`${API_BASE_URL}/server/${serverNum}/config`, { method: 'POST', body: JSON.stringify(config), headers: { 'Content-Type': 'application/json' } }).then(res => res.json()),
@@ -152,10 +185,9 @@
                                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                     <div class="form-control"><label class="label"><span class="label-text">Server Name</span></label><input type="text" name="name" class="input input-bordered w-full" /></div>
                                     <div class="form-control"><label class="label"><span class="label-text">Port</span></label><input type="number" name="port" class="input input-bordered w-full" /></div>
-                                    <div class="form-control"><label class="label"><span class="label-text">Ping Port</span></label><input type="number" name="pingPort" class="input input-bordered w-full" /></div>
                                     <div class="form-control"><label class="label"><span class="label-text">Max Players</span></label><input type="number" name="maxPlayers" class="input input-bordered w-full" /></div>
                                     <div class="form-control"><label class="label"><span class="label-text">Password</span></label><input type="text" name="password" class="input input-bordered w-full" /></div>
-                                    <div class="form-control"><label class="label"><span class="label-text">VOIP Enabled</span></label><select name="voip" class="select select-bordered"><option value="true">True</option><option value="false">False</option></select></div>
+                                    <div class="form-control"><label class="label"><span class="label-text">VOIP Enabled</span></label><select name="useVoip" class="select select-bordered"><option value="true">True</option><option value="false">False</option></select></div>
                                 </div>
                                 <div class="form-control">
                                     <label class="label"><span class="label-text">Admin SteamIDs (comma separated)</span></label>
@@ -174,31 +206,21 @@
                                     <h3 class="text-lg font-bold border-b border-base-300 pb-2 mb-4">Server Behavior</h3>
                                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                         <div class="form-control"><label class="label cursor-pointer"><span class="label-text">Is Public</span><input type="checkbox" name="isPublic" class="toggle toggle-primary" /></label></div>
+                                        <div class="form-control"><label class="label cursor-pointer"><span class="label-text">Use Whitelist</span><input type="checkbox" name="useWhitelist" class="toggle toggle-primary" /></label></div>
                                         <div class="form-control"><label class="label cursor-pointer"><span class="label-text">Reload Banned IDs</span><input type="checkbox" name="reloadBannedSteamIds" class="toggle toggle-primary" /></label></div>
                                         <div class="form-control"><label class="label cursor-pointer"><span class="label-text">Use Puck Banned IDs</span><input type="checkbox" name="usePuckBannedSteamIds" class="toggle toggle-primary" /></label></div>
                                         <div class="form-control"><label class="label cursor-pointer"><span class="label-text">Print Metrics</span><input type="checkbox" name="printMetrics" class="toggle toggle-primary" /></label></div>
                                         <div class="form-control"><label class="label cursor-pointer"><span class="label-text">Start Paused</span><input type="checkbox" name="startPaused" class="toggle toggle-primary" /></label></div>
                                         <div class="form-control"><label class="label cursor-pointer"><span class="label-text">Allow Voting</span><input type="checkbox" name="allowVoting" class="toggle toggle-primary" /></label></div>
+                                        <div class="form-control"><label class="label"><span class="label-text">Game Mode</span></label><input type="text" name="gameMode" class="input input-bordered w-full" /></div>
+                                        <div class="form-control"><label class="label"><span class="label-text">Level</span></label><input type="text" name="level" class="input input-bordered w-full" /></div>
                                     </div>
-                                    <h3 class="text-lg font-bold border-b border-base-300 pb-2 mt-6 mb-4">Timeouts & Ticks</h3>
+                                    <h3 class="text-lg font-bold border-b border-base-300 pb-2 mt-6 mb-4">Timeouts & Client Tick</h3>
                                      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                         <div class="form-control"><label class="label"><span class="label-text">Kick Timeout</span></label><input type="number" name="kickTimeout" class="input input-bordered w-full" /></div>
                                         <div class="form-control"><label class="label"><span class="label-text">Sleep Timeout</span></label><input type="number" name="sleepTimeout" class="input input-bordered w-full" /></div>
                                         <div class="form-control"><label class="label"><span class="label-text">Join Mid-Match Delay</span></label><input type="number" name="joinMidMatchDelay" class="input input-bordered w-full" /></div>
-                                        <div class="form-control"><label class="label"><span class="label-text">Target Frame Rate</span></label><input type="number" name="targetFrameRate" class="input input-bordered w-full" /></div>
-                                        <div class="form-control"><label class="label"><span class="label-text">Server Tick Rate</span></label><input type="number" name="serverTickRate" class="input input-bordered w-full" /></div>
                                         <div class="form-control"><label class="label"><span class="label-text">Client Tick Rate</span></label><input type="number" name="clientTickRate" class="input input-bordered w-full" /></div>
-                                    </div>
-                                    <h3 class="text-lg font-bold border-b border-base-300 pb-2 mt-6 mb-4">Phase Durations</h3>
-                                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                        <div class="form-control"><label class="label"><span class="label-text">Warmup</span></label><input type="number" name="Warmup" class="input input-bordered w-full" /></div>
-                                        <div class="form-control"><label class="label"><span class="label-text">FaceOff</span></label><input type="number" name="FaceOff" class="input input-bordered w-full" /></div>
-                                        <div class="form-control"><label class="label"><span class="label-text">Playing</span></label><input type="number" name="Playing" class="input input-bordered w-full" /></div>
-                                        <div class="form-control"><label class="label"><span class="label-text">BlueScore</span></label><input type="number" name="BlueScore" class="input input-bordered w-full" /></div>
-                                        <div class="form-control"><label class="label"><span class="label-text">RedScore</span></label><input type="number" name="RedScore" class="input input-bordered w-full" /></div>
-                                        <div class="form-control"><label class="label"><span class="label-text">Replay</span></label><input type="number" name="Replay" class="input input-bordered w-full" /></div>
-                                        <div class="form-control"><label class="label"><span class="label-text">PeriodOver</span></label><input type="number" name="PeriodOver" class="input input-bordered w-full" /></div>
-                                        <div class="form-control"><label class="label"><span class="label-text">GameOver</span></label><input type="number" name="GameOver" class="input input-bordered w-full" /></div>
                                     </div>
                                 </div>
                                 <div class="card-actions justify-end mt-4">
@@ -225,6 +247,41 @@
                 container.appendChild(modRow);
             };
 
+            const loadPublicGameModeConfig = async () => {
+                const response = await api.getPublicGameModeConfig();
+                if (!response.ok) {
+                    if (response.status === 403) window.location.href = '/login.html';
+                    return;
+                }
+
+                const config = await response.json();
+                const phaseMap = config.phaseDurationMap || {};
+                gameModeForm.elements.spawnDelay.value = config.spawnDelay ?? 5;
+                gameModeForm.elements.maxPeriods.value = config.maxPeriods ?? 3;
+                PHASE_FIELDS.forEach(field => {
+                    if (gameModeForm.elements[field]) gameModeForm.elements[field].value = phaseMap[field] ?? 0;
+                });
+            };
+
+            const collectAndSavePublicGameModeConfig = () => {
+                const config = {
+                    phaseDurationMap: {},
+                    spawnDelay: parseInt(gameModeForm.elements.spawnDelay.value, 10) || 0,
+                    maxPeriods: parseInt(gameModeForm.elements.maxPeriods.value, 10) || 0
+                };
+                PHASE_FIELDS.forEach(field => {
+                    const el = gameModeForm.elements[field];
+                    if (el) config.phaseDurationMap[field] = parseInt(el.value, 10) || 0;
+                });
+
+                const saveBtn = gameModeForm.querySelector('button[type="submit"]');
+                saveBtn.classList.add('loading');
+                api.updatePublicGameModeConfig(config)
+                    .then(data => alert(data.message))
+                    .catch(err => alert(`Error saving public game mode config: ${err}`))
+                    .finally(() => saveBtn.classList.remove('loading'));
+            };
+
             const loadServerData = async (serverNum) => {
                 try {
                     const response = await api.getServerConfig(serverNum);
@@ -235,23 +292,24 @@
                     const data = await response.json();
                     const form = document.getElementById(`form-server-${serverNum}`);
                     const config = data.config || {};
-                    const phaseMap = config.phaseDurationMap || {};
 
                     form.elements.name.value = config.name || '';
                     form.elements.port.value = config.port || '';
-                    form.elements.pingPort.value = config.pingPort || '';
                     form.elements.maxPlayers.value = config.maxPlayers || '';
                     form.elements.password.value = config.password || '';
-                    form.elements.voip.value = config.voip ? 'true' : 'false';
+                    form.elements.useVoip.value = config.useVoip ? 'true' : 'false';
+                    form.elements.gameMode.value = config.gameMode || 'public';
+                    form.elements.level.value = config.level || 'default';
                     form.elements.adminSteamIds.value = (config.adminSteamIds || []).join(', ');
                     
                     const modsContainer = document.getElementById(`mods-container-${serverNum}`);
                     modsContainer.innerHTML = '';
                     (config.mods || []).forEach(mod => addModRow(serverNum, mod));
                     
-                    ['isPublic', 'reloadBannedSteamIds', 'usePuckBannedSteamIds', 'printMetrics', 'startPaused', 'allowVoting'].forEach(field => { if(form.elements[field]) form.elements[field].checked = config[field] || false; });
-                    ['kickTimeout', 'sleepTimeout', 'joinMidMatchDelay', 'targetFrameRate', 'serverTickRate', 'clientTickRate'].forEach(field => { if(form.elements[field]) form.elements[field].value = config[field] || ''; });
-                    Object.keys(phaseMap).forEach(key => { if (form.elements[key]) form.elements[key].value = phaseMap[key] || ''; });
+                    ['isPublic', 'useWhitelist', 'reloadBannedSteamIds', 'usePuckBannedSteamIds', 'printMetrics', 'startPaused', 'allowVoting'].forEach(field => {
+                        if(form.elements[field]) form.elements[field].checked = config[field] ?? (field === 'useWhitelist' ? true : false);
+                    });
+                    ['kickTimeout', 'sleepTimeout', 'joinMidMatchDelay', 'clientTickRate'].forEach(field => { if(form.elements[field]) form.elements[field].value = config[field] || ''; });
                     
                     const statusBadge = document.getElementById(`server-status-${serverNum}`);
                     statusBadge.textContent = data.status;
@@ -271,15 +329,14 @@
                 const config = {
                     adminSteamIds: form.elements.adminSteamIds.value.split(',').map(s => s.trim()).filter(Boolean),
                     mods: [],
-                    phaseDurationMap: {},
                 };
-                ['name', 'password', 'port', 'pingPort', 'maxPlayers', 'kickTimeout', 'sleepTimeout', 'joinMidMatchDelay', 'targetFrameRate', 'serverTickRate', 'clientTickRate'].forEach(f => {
+                ['name', 'password', 'gameMode', 'level', 'port', 'maxPlayers', 'kickTimeout', 'sleepTimeout', 'joinMidMatchDelay', 'clientTickRate'].forEach(f => {
                     const el = form.elements[f];
                     if (!el) return;
                     const val = el.value;
-                    config[f] = isNaN(parseInt(val, 10)) || ['name', 'password'].includes(f) ? val : parseInt(val, 10);
+                    config[f] = isNaN(parseInt(val, 10)) || ['name', 'password', 'gameMode', 'level'].includes(f) ? val : parseInt(val, 10);
                 });
-                ['voip', 'isPublic', 'reloadBannedSteamIds', 'usePuckBannedSteamIds', 'printMetrics', 'startPaused', 'allowVoting'].forEach(f => {
+                ['useVoip', 'isPublic', 'useWhitelist', 'reloadBannedSteamIds', 'usePuckBannedSteamIds', 'printMetrics', 'startPaused', 'allowVoting'].forEach(f => {
                     const el = form.elements[f];
                     if (!el) return;
                     config[f] = el.type === 'checkbox' ? el.checked : el.value === 'true';
@@ -290,10 +347,6 @@
                     if (!isNaN(id) && id > 0) {
                         config.mods.push({ id: id, enabled: row.querySelector('[name=modEnabled]').checked, clientRequired: row.querySelector('[name=modClientRequired]').checked });
                     }
-                });
-                ['Warmup', 'FaceOff', 'Playing', 'BlueScore', 'RedScore', 'Replay', 'PeriodOver', 'GameOver'].forEach(key => {
-                     const el = form.elements[key];
-                     if(el) config.phaseDurationMap[key] = parseInt(el.value, 10) || 0;
                 });
                 
                 const saveBtn = form.querySelector('button[type="submit"]');
@@ -341,6 +394,11 @@
                 }
             });
 
+            gameModeForm.addEventListener('submit', e => {
+                e.preventDefault();
+                collectAndSavePublicGameModeConfig();
+            });
+
              showAllServersToggle.addEventListener('change', (e) => {
                 for (let i = 2; i <= 4; i++) {
                     const serverEl = document.getElementById(`server-${i}`);
@@ -379,6 +437,7 @@
 
                     if (response.installed) {
                         serversView.classList.remove('hidden');
+                        await loadPublicGameModeConfig();
                         for (let i = 1; i <= 4; i++) {
                             createServerBlock(i);
                             await loadServerData(i);
@@ -400,4 +459,3 @@
     </script>
 </body>
 </html>
-

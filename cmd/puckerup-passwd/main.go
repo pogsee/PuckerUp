@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"log"
 	"math/big"
-	mrand "math/rand" // Aliased to avoid conflict with crypto/rand
+	mrand "math/rand"
 	"os"
 	"path/filepath"
 	"time"
@@ -29,11 +29,9 @@ func getRandomWord(wordList []string) string {
 
 func main() {
 	// Seed the math/rand package for the number generation.
-	// We use the 'mrand' alias here.
 	mrand.Seed(time.Now().UnixNano())
 
 	// 1. Generate the human-readable password
-	// We use the 'mrand' alias here.
 	randomNumber := mrand.Intn(900) + 100 // Generate a number between 100-999
 	password := fmt.Sprintf("%s_%s_%s_%d", getRandomWord(adjectives), getRandomWord(nouns), getRandomWord(verbs), randomNumber)
 
@@ -60,4 +58,3 @@ func main() {
 	// 5. Print the PLAIN TEXT password to standard output for the install script
 	fmt.Print(password)
 }
-

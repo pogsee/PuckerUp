@@ -17,11 +17,11 @@ mkdir ./app
 
 # Compile the main server application.
 echo "Compiling main server..."
-go build -o ./app/puckerup ./main.go
+go build -o ./app/puckerup .
 
 # Compile the password generator utility.
 echo "Compiling password generator..."
-go build -o ./app/puckerup-passwd ./generate-password.go
+go build -o ./app/puckerup-passwd ./cmd/puckerup-passwd
 
 # Copy the necessary web files.
 echo "Copying web files..."
