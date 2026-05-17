@@ -305,7 +305,7 @@
                     (config.mods || []).forEach(mod => addModRow(serverNum, mod));
                     
                     ['isPublic', 'useWhitelist', 'reloadBannedSteamIds', 'usePuckBannedSteamIds', 'printMetrics', 'startPaused', 'allowVoting'].forEach(field => {
-                        if(form.elements[field]) form.elements[field].checked = config[field] ?? (field === 'useWhitelist' ? true : false);
+                        if(form.elements[field]) form.elements[field].checked = config[field] ?? false;
                     });
                     ['kickTimeout', 'sleepTimeout', 'joinMidMatchDelay', 'tickRate'].forEach(field => { if(form.elements[field]) form.elements[field].value = config[field] || ''; });
                     

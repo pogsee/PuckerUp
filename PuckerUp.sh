@@ -144,7 +144,7 @@ for i in {1..4}; do
   "password": "${GAME_PASSWORD}",
   "useVoip": false,
   "isPublic": true,
-  "useWhitelist": true,
+  "useWhitelist": false,
   "gameMode": "public",
   "level": "default",
   "adminSteamIds": [],
