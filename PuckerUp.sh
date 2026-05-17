@@ -119,9 +119,7 @@ After=network.target
 WorkingDirectory=/srv/puckserver
 User=puck
 Group=puck
-# The game server binary requires a start_server.sh script to run.
-# This is a common pattern for Unity games.
-ExecStart=/srv/puckserver/Puck --serverConfigPath %i.json
+ExecStart=/srv/puckserver/Puck --serverConfigPath %i.json --adminSteamIdsPath admin_steam_ids.json
 Restart=on-failure
 RestartSec=10
 
@@ -133,6 +131,10 @@ systemctl daemon-reload
 print_heading "Generating Initial Server Config Files"
 # Generate a random password for the game servers themselves.
 GAME_PASSWORD=$(tr -dc 'A-Za-z0-9' < /dev/urandom | head -c 12)
+
+cat > "/srv/puckserver/admin_steam_ids.json" <<'EOF'
+[]
+EOF
 
 for i in {1..4}; do
     port=$((30609 + (i-1)))
@@ -147,7 +149,6 @@ for i in {1..4}; do
   "useWhitelist": false,
   "gameMode": "public",
   "level": "default",
-  "adminSteamIds": [],
   "reloadBannedSteamIds": true,
   "usePuckBannedSteamIds": true,
   "printMetrics": true,

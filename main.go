@@ -23,6 +23,7 @@ import (
 const puckServerPath = "/srv/puckserver/Puck"
 const passwordFilePath = "/srv/puckserver/.puckerup_password"
 const configBasePath = "/srv/puckserver"
+const adminSteamIdsFilePath = "/srv/puckserver/admin_steam_ids.json"
 const publicGameModeConfigPath = "/srv/puckserver/public_game_mode_config.json"
 const schedulesFilePath = "/srv/puckserver/schedules.json"
 
@@ -46,31 +47,34 @@ type Mod struct {
 	ClientRequired bool   `json:"clientRequired"`
 }
 type ServerConfig struct {
-	Port                  int      `json:"port"`
-	Name                  string   `json:"name"`
-	MaxPlayers            int      `json:"maxPlayers"`
-	Password              string   `json:"password"`
-	UseVoip               bool     `json:"useVoip"`
-	IsPublic              bool     `json:"isPublic"`
-	UseWhitelist          bool     `json:"useWhitelist"`
-	GameMode              string   `json:"gameMode"`
-	Level                 string   `json:"level"`
-	AdminSteamIds         []string `json:"adminSteamIds"`
-	ReloadBannedSteamIds  bool     `json:"reloadBannedSteamIds"`
-	UsePuckBannedSteamIds bool     `json:"usePuckBannedSteamIds"`
-	PrintMetrics          bool     `json:"printMetrics"`
-	KickTimeout           int      `json:"kickTimeout"`
-	SleepTimeout          int      `json:"sleepTimeout"`
-	JoinMidMatchDelay     int      `json:"joinMidMatchDelay"`
-	TickRate              int      `json:"tickRate"`
-	StartPaused           bool     `json:"startPaused"`
-	AllowVoting           bool     `json:"allowVoting"`
-	Mods                  []Mod    `json:"mods"`
+	Port                  int    `json:"port"`
+	Name                  string `json:"name"`
+	MaxPlayers            int    `json:"maxPlayers"`
+	Password              string `json:"password"`
+	UseVoip               bool   `json:"useVoip"`
+	IsPublic              bool   `json:"isPublic"`
+	UseWhitelist          bool   `json:"useWhitelist"`
+	GameMode              string `json:"gameMode"`
+	Level                 string `json:"level"`
+	ReloadBannedSteamIds  bool   `json:"reloadBannedSteamIds"`
+	UsePuckBannedSteamIds bool   `json:"usePuckBannedSteamIds"`
+	PrintMetrics          bool   `json:"printMetrics"`
+	KickTimeout           int    `json:"kickTimeout"`
+	SleepTimeout          int    `json:"sleepTimeout"`
+	JoinMidMatchDelay     int    `json:"joinMidMatchDelay"`
+	TickRate              int    `json:"tickRate"`
+	StartPaused           bool   `json:"startPaused"`
+	AllowVoting           bool   `json:"allowVoting"`
+	Mods                  []Mod  `json:"mods"`
 }
 type PublicGameModeConfig struct {
 	PhaseDurationMap PhaseDurationMap `json:"phaseDurationMap"`
 	SpawnDelay       int              `json:"spawnDelay"`
 	MaxPeriods       int              `json:"maxPeriods"`
+}
+type ServerConfigPayload struct {
+	ServerConfig
+	AdminSteamIds []string `json:"adminSteamIds"`
 }
 
 // --- NEW: Rate Limiter ---
@@ -284,7 +288,6 @@ func defaultServerConfig(serverNum string) ServerConfig {
 		UseWhitelist:          true,
 		GameMode:              "public",
 		Level:                 "default",
-		AdminSteamIds:         []string{},
 		ReloadBannedSteamIds:  true,
 		UsePuckBannedSteamIds: true,
 		PrintMetrics:          true,
@@ -296,6 +299,45 @@ func defaultServerConfig(serverNum string) ServerConfig {
 		AllowVoting:           true,
 		Mods:                  []Mod{},
 	}
+}
+
+func readAdminSteamIds() ([]string, bool, error) {
+	adminSteamIds := []string{}
+	file, err := os.ReadFile(adminSteamIdsFilePath)
+	if err == nil {
+		if err := json.Unmarshal(file, &adminSteamIds); err != nil {
+			return nil, true, err
+		}
+		return adminSteamIds, true, nil
+	}
+	if os.IsNotExist(err) {
+		return adminSteamIds, false, nil
+	}
+	return nil, false, err
+}
+
+func writeAdminSteamIds(adminSteamIds []string) error {
+	if adminSteamIds == nil {
+		adminSteamIds = []string{}
+	}
+	var buffer bytes.Buffer
+	encoder := json.NewEncoder(&buffer)
+	encoder.SetEscapeHTML(false)
+	encoder.SetIndent("", "  ")
+	if err := encoder.Encode(adminSteamIds); err != nil {
+		return err
+	}
+	return os.WriteFile(adminSteamIdsFilePath, buffer.Bytes(), 0644)
+}
+
+func legacyAdminSteamIdsFromServerConfig(file []byte) []string {
+	var legacy struct {
+		AdminSteamIds []string `json:"adminSteamIds"`
+	}
+	if err := json.Unmarshal(file, &legacy); err != nil {
+		return nil
+	}
+	return legacy.AdminSteamIds
 }
 
 func getPublicGameModeConfigHandler(w http.ResponseWriter, r *http.Request) {
@@ -349,13 +391,25 @@ func getServerConfigHandler(w http.ResponseWriter, r *http.Request) {
 	if err == nil {
 		json.Unmarshal(file, &config)
 	}
+	adminSteamIds, adminSteamIdsFileExists, adminErr := readAdminSteamIds()
+	if adminErr != nil {
+		log.Printf("Failed to read admin Steam IDs: %v", adminErr)
+		http.Error(w, "Failed to read admin Steam IDs", http.StatusInternalServerError)
+		return
+	}
+	if !adminSteamIdsFileExists && err == nil {
+		adminSteamIds = legacyAdminSteamIdsFromServerConfig(file)
+	}
+	if adminSteamIds == nil {
+		adminSteamIds = []string{}
+	}
 
 	cmd := exec.Command("systemctl", "is-active", fmt.Sprintf("puck@server%s", serverNum))
 	statusOutput, _ := cmd.Output()
 	status := strings.TrimSpace(string(statusOutput))
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]interface{}{"config": config, "status": status})
+	json.NewEncoder(w).Encode(map[string]interface{}{"config": ServerConfigPayload{ServerConfig: config, AdminSteamIds: adminSteamIds}, "status": status})
 }
 
 func updateServerConfigHandler(w http.ResponseWriter, r *http.Request) {
@@ -363,16 +417,32 @@ func updateServerConfigHandler(w http.ResponseWriter, r *http.Request) {
 	serverNum := vars["serverNum"]
 	configFile := filepath.Join(configBasePath, fmt.Sprintf("server%s.json", serverNum))
 
-	var config ServerConfig
-	json.NewDecoder(r.Body).Decode(&config)
+	var payload ServerConfigPayload
+	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+		http.Error(w, "Invalid JSON", http.StatusBadRequest)
+		return
+	}
 
 	var buffer bytes.Buffer
 	encoder := json.NewEncoder(&buffer)
 	encoder.SetEscapeHTML(false)
 	encoder.SetIndent("", "  ")
-	encoder.Encode(config)
+	if err := encoder.Encode(payload.ServerConfig); err != nil {
+		log.Printf("Failed to encode server config: %v", err)
+		http.Error(w, "Failed to save server config", http.StatusInternalServerError)
+		return
+	}
 
-	os.WriteFile(configFile, buffer.Bytes(), 0644)
+	if err := os.WriteFile(configFile, buffer.Bytes(), 0644); err != nil {
+		log.Printf("Failed to write server config: %v", err)
+		http.Error(w, "Failed to save server config", http.StatusInternalServerError)
+		return
+	}
+	if err := writeAdminSteamIds(payload.AdminSteamIds); err != nil {
+		log.Printf("Failed to write admin Steam IDs: %v", err)
+		http.Error(w, "Failed to save admin Steam IDs", http.StatusInternalServerError)
+		return
+	}
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{"message": "Config saved successfully!"})
 }
