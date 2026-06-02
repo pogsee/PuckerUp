@@ -171,7 +171,7 @@ cat > "/srv/puckserver/public_game_mode_config.json" <<'EOF'
 {
   "phaseDurationMap": {
     "None": 0,
-    "Warmup": 60,
+    "Warmup": 600,
     "PreGame": 10,
     "FaceOff": 5,
     "Play": 300,
